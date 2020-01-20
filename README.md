@@ -65,22 +65,22 @@ You can also set the `entity_id` with value **this** if you use **this** it will
 Example configuration with next, play/pause and previous actions
 ```
 type: custom:media_player-popup-card
-  actions:
-    - service: media_player.media_previous_track
-      service_data:
-        entity_id: this
-      name: previous
-      icon: mdi:skip-previous
-    - service: media_player.media_play_pause
-      service_data:
-        entity_id: this
-      name: play/pause
-      icon: mdi:play-pause
-    - service: media_player.media_next_track
-      service_data:
-        entity_id: this
-      name: next
-      icon: mdi:skip-next
+actions:
+  - service: media_player.media_previous_track
+    service_data:
+      entity_id: this
+    name: previous
+    icon: mdi:skip-previous
+  - service: media_player.media_play_pause
+    service_data:
+      entity_id: this
+    name: play/pause
+    icon: mdi:play-pause
+  - service: media_player.media_next_track
+    service_data:
+      entity_id: this
+    name: next
+    icon: mdi:skip-next
 ```
 
 ### Screenshot
