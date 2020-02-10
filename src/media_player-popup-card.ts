@@ -9,6 +9,8 @@ class MediaPlayerPopupCard extends LitElement {
   hass: any;
   shadowRoot: any;
   actionRows:any = [];
+  settings = false;
+  settingsCustomCard = false;
 
   static get properties() {
     return {
@@ -50,44 +52,120 @@ class MediaPlayerPopupCard extends LitElement {
     var sliderHeight = this.config.sliderHeight ? this.config.sliderHeight : "400px";
     var offStates = ['off', 'unavailable', 'paused'];
     var actionRowCount = 0;
+    this.settings = "settings" in this.config? true : false;
+    this.settingsCustomCard = "settingsCard" in this.config? true : false;
+    var sliderColor = "sliderColor" in this.config ? this.config.sliderColor : "#FFF";
+    var sliderThumbColor = "sliderThumbColor" in this.config ? this.config.sliderThumbColor : "#ddd";
+    var sliderTrackColor = "sliderTrackColor" in this.config ? this.config.sliderTrackColor : "#ddd";
     return html`
       <div class="${fullscreen === true ? 'popup-wrapper':''}">
-            <div class="popup-inner" @click="${e => this._close(e)}">
-                <div class="icon fullscreen${offStates.includes(stateObj.state) ? '' : ' on'}">
-                    <ha-icon icon="${icon}" />
-                </div>
-                <h4 class="${stateObj.state === "off" ? '' : 'brightness'}">${stateObj.state === "off" ? computeStateDisplay(this.hass.localize, stateObj, this.hass.language) : Math.round(stateObj.attributes.volume_level * 100)}</h4>
-                <div class="range-holder" style="--slider-height: ${sliderHeight};--slider-width: ${sliderWidth};">
-                    <input type="range" style="--slider-width: ${sliderWidth};--slider-height: ${sliderHeight}; --slider-border-radius: ${borderRadius}" .value="${stateObj.state === "off" ? 0 : Math.round(stateObj.attributes.volume_level * 100)}" @change=${e => this._setVolume(stateObj, e.target.value)}>
-                </div>
+        <div id="popup" class="popup-inner" @click="${e => this._close(e)}">
+          <div class="icon${fullscreen === true ? ' fullscreen':''}${offStates.includes(stateObj.state) ? '' : ' on'}">
+              <ha-icon icon="${icon}" />
+          </div>
+          <h4 class="${stateObj.state === "off" ? '' : 'brightness'}">${stateObj.state === "off" ? computeStateDisplay(this.hass.localize, stateObj, this.hass.language) : Math.round(stateObj.attributes.volume_level * 100)}</h4>
+          <div class="range-holder" style="--slider-height: ${sliderHeight};--slider-width: ${sliderWidth};">
+              <input type="range" style="--slider-width: ${sliderWidth};--slider-height: ${sliderHeight}; --slider-border-radius: ${borderRadius};--slider-color:${sliderColor};--slider-thumb-color:${sliderThumbColor};--slider-track-color:${sliderTrackColor};" .value="${stateObj.state === "off" ? 0 : Math.round(stateObj.attributes.volume_level * 100)}" @change=${e => this._setVolume(stateObj, e.target.value)}>
+          </div>
 
-                ${actions && actions.length > 0 ? html`
-                <div class="action-holder">
+          ${actions && actions.length > 0 ? html`
+          <div class="action-holder">
 
-                    ${this.actionRows.map((actionRow) => {
-                      actionRowCount++;
-                      var actionCount = 0;
-                      return html`
-                        <div class="action-row">
-                        ${actionRow.map((action) => {
-                          actionCount++;
-                          return html`
-                            <div class="action" @click="${e => this._activateAction(e)}" data-service="${actionRowCount}#${actionCount}">
-                                <span class="color" style="background-color: ${action.color};border-color: ${action.color};">${action.icon ? html`<ha-icon icon="${action.icon}" />`:html``}</span>
-                                ${action.name ? html`<span class="name">${action.name}</span>`: html``}
-                            </div>
-                          `
-                        })}
-                        </div>
-                      `
-                    })}
-                </div>` : html ``}
-            </div>
+              ${this.actionRows.map((actionRow) => {
+                actionRowCount++;
+                var actionCount = 0;
+                return html`
+                  <div class="action-row">
+                  ${actionRow.map((action) => {
+                    actionCount++;
+                    return html`
+                      <div class="action" @click="${e => this._activateAction(e)}" data-service="${actionRowCount}#${actionCount}">
+                          <span class="color" style="background-color: ${action.color};border-color: ${action.color};">${action.icon ? html`<ha-icon icon="${action.icon}" />`:html``}</span>
+                          ${action.name ? html`<span class="name">${action.name}</span>`: html``}
+                      </div>
+                    `
+                  })}
+                  </div>
+                `
+              })}
+          </div>` : html ``}
+          ${this.settings ? html`<button class="bottom-right-btn" @click="${() => this._openSettings()}">${this.config.settings.openButton ? this.config.settings.openButton:'Settings'}</button>`:html``}
         </div>
+        ${this.settings ? html`
+            <div id="settings" class="${fullscreen === true ? ' fullscreen':''}">
+              <div class="settings-inner" @click="${e => this._close(e)}">
+                ${this.settingsCustomCard ? html`
+                  <card-maker nohass data-card="${this.config.settingsCard.type}" data-options="${JSON.stringify(this.config.settingsCard.cardOptions)}" data-style="${this.config.settingsCard.cardStyle ? this.config.settingsCard.cardStyle : ''}">
+                  </card-maker>
+                `:html`
+                    <more-info-controls
+                    .dialogElement=${null}
+                    .canConfigure=${false}
+                    .hass=${this.hass}
+                    .stateObj=${stateObj}
+                    style="--paper-slider-knob-color: white !important;
+                    --paper-slider-knob-start-color: white !important;
+                    --paper-slider-pin-color: white !important;
+                    --paper-slider-active-color: white !important;
+                    color: white !important;
+                    --primary-text-color: white !important;"
+                  ></more-info-controls>
+                `}
+                <button class="bottom-right-btn" @click="${() => this._closeSettings()}">${this.config.settings.closeButton ? this.config.settings.closeButton:'Close'}</button>
+              </div>
+            </div>
+          `:html``}
+      </div>
     `;
+  }
+
+  firstUpdated() {
+    if(this.settings && !this.settingsCustomCard) {
+    const mic = this.shadowRoot.querySelector("more-info-controls").shadowRoot;
+    mic.removeChild(mic.querySelector("app-toolbar"));
+    } else if(this.settings && this.settingsCustomCard) {
+      this.shadowRoot.querySelectorAll("card-maker").forEach(customCard => {
+        var card = {
+          type: customCard.dataset.card
+        };
+        card = Object.assign({}, card, JSON.parse(customCard.dataset.options));
+        customCard.config = card;
+
+        let style = "";
+        if(customCard.dataset.style) {
+          style = customCard.dataset.style;
+        }
+
+        if(style != "") {
+          let itterations = 0;
+          let interval = setInterval(function () {
+            let el = customCard.children[0];
+            if(el) {
+              window.clearInterval(interval);
+
+              var styleElement = document.createElement('style');
+              styleElement.innerHTML = style;
+              el.shadowRoot.appendChild(styleElement);
+
+            } else if (++itterations === 10 ) {
+              window.clearInterval(interval);
+            }
+          }, 100);
+        }
+      });
+    }
   }
   
   updated() { }
+
+  _openSettings() {
+    this.shadowRoot.getElementById('popup').classList.add("off");
+    this.shadowRoot.getElementById('settings').classList.add("on");
+  }
+  _closeSettings() {
+    this.shadowRoot.getElementById('settings').classList.remove("on");
+    this.shadowRoot.getElementById('popup').classList.remove("off");
+  }
 
   _close(event) {
     if(event && event.target.className === 'popup-inner') {
@@ -155,6 +233,43 @@ class MediaPlayerPopupCard extends LitElement {
             justify-content: center;
             flex-direction: column;
         }
+        .popup-inner.off {
+          display:none;
+        }
+        #settings {
+          position:relative;
+          display:none;
+        }
+        #settings.fullscreen {
+          position:absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+        }
+        .settings-inner {
+          height: 100%;
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-direction: column;
+        }
+        #settings.on {
+          display:block;
+        }
+        .bottom-right-btn {
+          position:absolute;
+          bottom:15px;
+          right:30px;
+          background-color: #7f8082;
+          color: #FFF;
+          border: 0;
+          padding: 5px 20px;
+          border-radius: 10px;
+          font-weight: 500;
+          cursor: pointer;
+        }
         .fullscreen {
           margin-top:-64px;
         }
@@ -210,7 +325,7 @@ class MediaPlayerPopupCard extends LitElement {
             overflow: hidden;
             height: var(--slider-width);
             -webkit-appearance: none;
-            background-color: #ddd;
+            background-color: var(--slider-track-color);
             position: absolute;
             top: calc(50% - (var(--slider-width) / 2));
             right: calc(50% - (var(--slider-height) / 2));
@@ -218,21 +333,21 @@ class MediaPlayerPopupCard extends LitElement {
         .range-holder input[type="range"]::-webkit-slider-runnable-track {
             height: var(--slider-width);
             -webkit-appearance: none;
-            color: #ddd;
+            background-color: var(--slider-track-color);
             margin-top: -1px;
             transition: box-shadow 0.2s ease-in-out;
         }
         .range-holder input[type="range"]::-webkit-slider-thumb {
             width: 25px;
-            border-right:10px solid #FFF;
-            border-left:10px solid #FFF;
-            border-top:20px solid #FFF;
-            border-bottom:20px solid #FFF;
+            border-right:10px solid var(--slider-color);
+            border-left:10px solid var(--slider-color);
+            border-top:20px solid var(--slider-color);
+            border-bottom:20px solid var(--slider-color);
             -webkit-appearance: none;
             height: 80px;
             cursor: ew-resize;
             background: #fff;
-            box-shadow: -350px 0 0 350px #FFF, inset 0 0 0 80px #ddd;
+            box-shadow: -350px 0 0 350px var(--slider-color), inset 0 0 0 80px var(--slider-thumb-color);
             border-radius: 0;
             transition: box-shadow 0.2s ease-in-out;
             position: relative;
