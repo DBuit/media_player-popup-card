@@ -11,6 +11,7 @@ class MediaPlayerPopupCard extends LitElement {
   actionRows:any = [];
   settings = false;
   settingsCustomCard = false;
+  settingsPosition = "bottom";
 
   static get properties() {
     return {
@@ -33,6 +34,7 @@ class MediaPlayerPopupCard extends LitElement {
     var borderRadius = this.config.borderRadius ? this.config.borderRadius : '12px';  
     
     //Actions
+    var actionSize = "actionSize" in this.config ? this.config.actionSize : "50px";
     var actions = this.config.actions;
     if(actions && actions.length > 0) {
         
@@ -54,6 +56,7 @@ class MediaPlayerPopupCard extends LitElement {
     var actionRowCount = 0;
     this.settings = "settings" in this.config? true : false;
     this.settingsCustomCard = "settingsCard" in this.config? true : false;
+    this.settingsPosition = "settingsPosition" in this.config ? this.config.settingsPosition : "bottom";
     var sliderColor = "sliderColor" in this.config ? this.config.sliderColor : "#FFF";
     var sliderThumbColor = "sliderThumbColor" in this.config ? this.config.sliderThumbColor : "#ddd";
     var sliderTrackColor = "sliderTrackColor" in this.config ? this.config.sliderTrackColor : "#ddd";
@@ -92,8 +95,8 @@ class MediaPlayerPopupCard extends LitElement {
                   ${actionRow.map((action) => {
                     actionCount++;
                     return html`
-                      <div class="action" @click="${e => this._activateAction(e)}" data-service="${actionRowCount}#${actionCount}">
-                          <span class="color" style="background-color: ${action.color};border-color: ${action.color};">${action.icon ? html`<ha-icon icon="${action.icon}" />`:html``}</span>
+                      <div class="action" style="--size:${actionSize};" @click="${e => this._activateAction(e)}" data-service="${actionRowCount}#${actionCount}">
+                          <span class="color" style="background-color: ${action.color};border-color: ${action.color};--size:${actionSize};">${action.icon ? html`<ha-icon icon="${action.icon}" />`:html``}</span>
                           ${action.name ? html`<span class="name">${action.name}</span>`: html``}
                       </div>
                     `
@@ -102,30 +105,28 @@ class MediaPlayerPopupCard extends LitElement {
                 `
               })}
           </div>` : html ``}
-          ${this.settings ? html`<button class="bottom-right-btn" @click="${() => this._openSettings()}">${this.config.settings.openButton ? this.config.settings.openButton:'Settings'}</button>`:html``}
+          ${this.settings ? html`<button class="settings-btn ${this.settingsPosition}${fullscreen === true ? ' fullscreen':''}" @click="${() => this._openSettings()}">${this.config.settings.openButton ? this.config.settings.openButton:'Settings'}</button>`:html``}
         </div>
         ${this.settings ? html`
-            <div id="settings" class="${fullscreen === true ? ' fullscreen':''}">
-              <div class="settings-inner" @click="${e => this._close(e)}">
-                ${this.settingsCustomCard ? html`
-                  <card-maker nohass data-card="${this.config.settingsCard.type}" data-options="${JSON.stringify(this.config.settingsCard.cardOptions)}" data-style="${this.config.settingsCard.cardStyle ? this.config.settingsCard.cardStyle : ''}">
-                  </card-maker>
-                `:html`
-                    <more-info-controls
-                    .dialogElement=${null}
-                    .canConfigure=${false}
-                    .hass=${this.hass}
-                    .stateObj=${stateObj}
-                    style="--paper-slider-knob-color: white !important;
-                    --paper-slider-knob-start-color: white !important;
-                    --paper-slider-pin-color: white !important;
-                    --paper-slider-active-color: white !important;
-                    color: white !important;
-                    --primary-text-color: white !important;"
-                  ></more-info-controls>
-                `}
-                <button class="bottom-right-btn" @click="${() => this._closeSettings()}">${this.config.settings.closeButton ? this.config.settings.closeButton:'Close'}</button>
-              </div>
+            <div id="settings" class="settings-inner" @click="${e => this._close(e)}">
+              ${this.settingsCustomCard ? html`
+                <card-maker nohass data-card="${this.config.settingsCard.type}" data-options="${JSON.stringify(this.config.settingsCard.cardOptions)}" data-style="${this.config.settingsCard.cardStyle ? this.config.settingsCard.cardStyle : ''}">
+                </card-maker>
+              `:html`
+                  <more-info-controls
+                  .dialogElement=${null}
+                  .canConfigure=${false}
+                  .hass=${this.hass}
+                  .stateObj=${stateObj}
+                  style="--paper-slider-knob-color: white !important;
+                  --paper-slider-knob-start-color: white !important;
+                  --paper-slider-pin-color: white !important;
+                  --paper-slider-active-color: white !important;
+                  color: white !important;
+                  --primary-text-color: white !important;"
+                ></more-info-controls>
+              `}
+              <button class="settings-btn ${this.settingsPosition}${fullscreen === true ? ' fullscreen':''}" @click="${() => this._closeSettings()}">${this.config.settings.closeButton ? this.config.settings.closeButton:'Close'}</button>
             </div>
           `:html``}
       </div>
@@ -181,7 +182,7 @@ class MediaPlayerPopupCard extends LitElement {
   }
 
   _close(event) {
-    if(event && (event.target.className === 'popup-inner' || event.target.className === 'settings-inner')) {
+    if(event && (event.target.className.includes('popup-inner') || event.target.className.includes('settings-inner'))) {
       closePopUp();
     }
   }
@@ -250,15 +251,7 @@ class MediaPlayerPopupCard extends LitElement {
           display:none;
         }
         #settings {
-          position:relative;
           display:none;
-        }
-        #settings.fullscreen {
-          position:absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
         }
         .settings-inner {
           height: 100%;
@@ -269,11 +262,10 @@ class MediaPlayerPopupCard extends LitElement {
           flex-direction: column;
         }
         #settings.on {
-          display:block;
+          display:flex;
         }
-        .bottom-right-btn {
+        .settings-btn {
           position:absolute;
-          bottom:15px;
           right:30px;
           background-color: #7f8082;
           color: #FFF;
@@ -282,6 +274,15 @@ class MediaPlayerPopupCard extends LitElement {
           border-radius: 10px;
           font-weight: 500;
           cursor: pointer;
+        }
+        .settings-btn.bottom {
+          bottom:15px;
+        }
+        .settings-btn.bottom.fullscreen {
+          margin:0;
+        }
+        .settings-btn.top {
+          top: 25px;
         }
         .fullscreen {
           margin-top:-64px;
@@ -388,12 +389,12 @@ class MediaPlayerPopupCard extends LitElement {
             margin-right:0;
         }
         .action-holder .action .color {
-            width:50px;
-            height:50px;
+            width:var(--size);
+            height:var(--size);
             border-radius:50%;
             display:block;
             border: 1px solid #FFF;
-            line-height: 50px;
+            line-height: var(--size);
             text-align: center;
             pointer-events: none;
         }
@@ -401,7 +402,7 @@ class MediaPlayerPopupCard extends LitElement {
           pointer-events: none;
         }
         .action-holder .action .name {
-            width:50px;
+            width:var(--size);
             display:block;
             color: #FFF;
             font-size: 9px;
