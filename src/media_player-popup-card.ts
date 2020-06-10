@@ -12,6 +12,7 @@ class MediaPlayerPopupCard extends LitElement {
   settings = false;
   settingsCustomCard = false;
   settingsPosition = "bottom";
+  currentVolume = 0;
 
   static get properties() {
     return {
@@ -32,6 +33,7 @@ class MediaPlayerPopupCard extends LitElement {
     var actionsInARow = this.config.actionsInARow ? this.config.actionsInARow : 4;
     var icon = this.config.icon ? this.config.icon : stateObj.attributes.icon ? stateObj.attributes.icon: 'mdi:speaker';
     var borderRadius = this.config.borderRadius ? this.config.borderRadius : '12px';  
+    this.currentVolume = Math.round(stateObj.attributes.volume_level * 100);
     
     //Actions
     var actionSize = "actionSize" in this.config ? this.config.actionSize : "50px";
@@ -79,9 +81,9 @@ class MediaPlayerPopupCard extends LitElement {
           <div class="icon${fullscreen === true ? ' fullscreen':''}${offStates.includes(stateObj.state) ? '' : ' on'}">
               <ha-icon icon="${icon}" />
           </div>
-          <h4 class="${stateObj.state === "off" ? '' : 'brightness'}">${stateObj.state === "off" ? computeStateDisplay(this.hass.localize, stateObj, this.hass.language) : Math.round(stateObj.attributes.volume_level * 100)}</h4>
+          <h4 id="volumeValue" class="${stateObj.state === "off" ? '' : 'brightness'}" data-value="${this.currentVolume}%">${stateObj.state === "off" ? computeStateDisplay(this.hass.localize, stateObj, this.hass.language) : ''}</h4>
           <div class="range-holder" style="--slider-height: ${sliderHeight};--slider-width: ${sliderWidth};">
-              <input type="range" style="--slider-width: ${sliderWidth};--slider-height: ${sliderHeight}; --slider-border-radius: ${borderRadius};--slider-color:${sliderColor};--slider-thumb-color:${sliderThumbColor};--slider-track-color:${sliderTrackColor};" .value="${stateObj.state === "off" ? 0 : Math.round(stateObj.attributes.volume_level * 100)}" @change=${e => this._setVolume(stateObj, e.target.value)}>
+              <input type="range" style="--slider-width: ${sliderWidth};--slider-height: ${sliderHeight}; --slider-border-radius: ${borderRadius};--slider-color:${sliderColor};--slider-thumb-color:${sliderThumbColor};--slider-track-color:${sliderTrackColor};" .value="${stateObj.state === "off" ? 0 : Math.round(stateObj.attributes.volume_level * 100)}" @input=${e => this._previewVolume(e.target.value)} @change=${e => this._setVolume(stateObj, e.target.value)}>
           </div>
 
           ${actions && actions.length > 0 ? html`
@@ -194,6 +196,12 @@ class MediaPlayerPopupCard extends LitElement {
     }
     return items;
   }
+
+  _previewVolume(value) {
+    this.currentVolume = value;
+    const el = this.shadowRoot.getElementById("volumeValue");
+    if(el) {el.dataset.value = value+"%";}
+  }
   
   _setVolume(state, value) {
     this.hass.callService("media_player", "volume_set", {
@@ -294,6 +302,7 @@ class MediaPlayerPopupCard extends LitElement {
             width: 40px;
             color: rgba(255,255,255,0.3);
             font-size: 30px;
+            --mdc-icon-size: 30px;
             padding-top:5px;
         }
         .icon ha-icon {
@@ -301,7 +310,7 @@ class MediaPlayerPopupCard extends LitElement {
             height:30px;
         }
         .icon.on ha-icon {
-            fill: #f7d959;
+            color: #f7d959;
         }
         h4 {
             color: #FFF;
@@ -314,8 +323,8 @@ class MediaPlayerPopupCard extends LitElement {
             text-transform: capitalize;
         }
         h4.brightness:after {
-            content: "%";
-            padding-left: 1px;
+          content: attr(data-value);
+          padding-left: 1px;
         }
         
         .range-holder {
@@ -400,6 +409,7 @@ class MediaPlayerPopupCard extends LitElement {
         }
         .action-holder .action .color ha-icon {
           pointer-events: none;
+          color: #FFF;
         }
         .action-holder .action .name {
             width:var(--size);
