@@ -15,7 +15,6 @@ const directives = new WeakMap();
 const isDirective = (o) => {
     return typeof o === 'function' && directives.has(o);
 };
-//# sourceMappingURL=directive.js.map
 
 /**
  * @license
@@ -47,7 +46,6 @@ const removeNodes = (container, start, end = null) => {
         start = n;
     }
 };
-//# sourceMappingURL=dom.js.map
 
 /**
  * @license
@@ -71,7 +69,6 @@ const noChange = {};
  * A sentinel value that signals a NodePart to fully clear its content.
  */
 const nothing = {};
-//# sourceMappingURL=part.js.map
 
 /**
  * @license
@@ -285,7 +282,6 @@ const createMarker = () => document.createComment('');
  *    * (') then any non-(')
  */
 const lastAttributeNameRegex = /([ \x09\x0a\x0c\x0d])([^\0-\x1F\x7F-\x9F "'>=/]+)([ \x09\x0a\x0c\x0d]*=[ \x09\x0a\x0c\x0d]*(?:[^ \x09\x0a\x0c\x0d"'`<>=]*|"[^"]*|'[^']*))$/;
-//# sourceMappingURL=template.js.map
 
 /**
  * @license
@@ -418,7 +414,6 @@ class TemplateInstance {
         return fragment;
     }
 }
-//# sourceMappingURL=template-instance.js.map
 
 /**
  * @license
@@ -507,7 +502,6 @@ class TemplateResult {
         return template;
     }
 }
-//# sourceMappingURL=template-result.js.map
 
 /**
  * @license
@@ -947,7 +941,6 @@ const getOptions = (o) => o &&
     (eventOptionsSupported ?
         { capture: o.capture, passive: o.passive, once: o.once } :
         o.capture);
-//# sourceMappingURL=parts.js.map
 
 /**
  * @license
@@ -999,7 +992,6 @@ class DefaultTemplateProcessor {
     }
 }
 const defaultTemplateProcessor = new DefaultTemplateProcessor();
-//# sourceMappingURL=default-template-processor.js.map
 
 /**
  * @license
@@ -1047,7 +1039,6 @@ function templateFactory(result) {
     return template;
 }
 const templateCaches = new Map();
-//# sourceMappingURL=template-factory.js.map
 
 /**
  * @license
@@ -1088,7 +1079,6 @@ const render = (result, container, options) => {
     part.setValue(result);
     part.commit();
 };
-//# sourceMappingURL=render.js.map
 
 /**
  * @license
@@ -1112,7 +1102,6 @@ const render = (result, container, options) => {
  * render to and update a container.
  */
 const html = (strings, ...values) => new TemplateResult(strings, values, 'html', defaultTemplateProcessor);
-//# sourceMappingURL=lit-html.js.map
 
 /**
  * @license
@@ -1237,7 +1226,6 @@ function insertNodeIntoTemplate(template, node, refNode = null) {
         }
     }
 }
-//# sourceMappingURL=modify-template.js.map
 
 /**
  * @license
@@ -1507,7 +1495,6 @@ const render$1 = (result, container, options) => {
         window.ShadyCSS.styleElement(container.host);
     }
 };
-//# sourceMappingURL=shady-render.js.map
 
 /**
  * @license
@@ -2133,7 +2120,6 @@ _a = finalized;
  * Marks class as having finished creating properties.
  */
 UpdatingElement[_a] = true;
-//# sourceMappingURL=updating-element.js.map
 
 /**
 @license
@@ -2197,7 +2183,6 @@ const css = (strings, ...values) => {
     const cssText = values.reduce((acc, v, idx) => acc + textFromCSSResult(v) + strings[idx + 1], strings[0]);
     return new CSSResult(cssText, constructionToken);
 };
-//# sourceMappingURL=css-tag.js.map
 
 /**
  * @license
@@ -2395,7 +2380,6 @@ LitElement['finalized'] = true;
  * @nocollapse
  */
 LitElement.render = render$1;
-//# sourceMappingURL=lit-element.js.map
 
 function hass() {
   if(document.querySelector('hc-main'))
@@ -2406,23 +2390,69 @@ function hass() {
 
   return undefined;
 }
-function load_lovelace() {
+async function load_lovelace() {
   if(customElements.get("hui-view")) return true;
 
-  const res = document.createElement("partial-panel-resolver");
-  res.hass = hass();
-  if(!res.hass || !res.hass.panels)
-    return false;
-  res.route = {path: "/lovelace/"};
-  res._updateRoutes();
-  try {
-    document.querySelector("home-assistant").appendChild(res);
-  } catch (error) {
-  } finally {
-    document.querySelector("home-assistant").removeChild(res);
+  await customElements.whenDefined("partial-panel-resolver");
+  const ppr = document.createElement("partial-panel-resolver");
+  ppr.hass = {panels: [{
+    url_path: "tmp",
+    "component_name": "lovelace",
+  }]};
+  ppr._updateRoutes();
+  await ppr.routerOptions.routes.tmp.load();
+  if(!customElements.get("ha-panel-lovelace")) return false;
+  const p = document.createElement("ha-panel-lovelace");
+  p.hass = hass();
+  if(p.hass === undefined) {
+    await new Promise(resolve => {
+      window.addEventListener('connection-status', (ev) => {
+        console.log(ev);
+        resolve();
+      }, {once: true});
+    });
+    p.hass = hass();
   }
-  if(customElements.get("hui-view")) return true;
-  return false;
+  p.panel = {config: {mode: null}};
+  p._fetchConfig();
+  return true;
+}
+
+async function _selectTree(root, path, all=false) {
+  let el = root;
+  if(typeof(path) === "string") {
+    path = path.split(/(\$| )/);
+  }
+  for(const [i, p] of path.entries()) {
+    if(!p.trim().length) continue;
+    if(!el) return null;
+    if(el.localName && el.localName.includes("-"))
+      await customElements.whenDefined(el.localName);
+    if(el.updateComplete)
+      await el.updateComplete;
+    if(p === "$")
+      if(all && i == path.length-1)
+        el = [el.shadowRoot];
+      else
+        el = el.shadowRoot;
+    else
+      if(all && i == path.length-1)
+        el = el.querySelectorAll(p);
+      else
+        el = el.querySelector(p);
+  }
+  return el;
+}
+
+async function selectTree(root, path, all=false, timeout=10000) {
+  return Promise.race([
+    _selectTree(root, path, all),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), timeout))
+  ]).catch((err) => {
+    if(!err.message || err.message !== "timeout")
+      throw(err);
+    return null;
+  });
 }
 
 let helpers = window.cardHelpers;
@@ -2448,11 +2478,12 @@ const helperPromise = new Promise(async (resolve, reject) => {
   }
 });
 
-function closePopUp() {
-  const root = document.querySelector("hc-main") || document.querySelector("home-assistant");
-  const moreInfoEl = root && root._moreInfoEl;
-  if(moreInfoEl)
-    moreInfoEl.close();
+async function closePopUp() {
+  const root = document.querySelector("home-assistant") || document.querySelector("hc-root");
+  const el = await selectTree(root, "$ card-tools-popup");
+
+  if(el)
+    el.closeDialog();
 }
 
 /**
@@ -2782,7 +2813,7 @@ fecha.parse = function (dateStr, format, i18nSettings) {
   return date;
 };
 
-var a=function(){try{(new Date).toLocaleDateString("i");}catch(e){return "RangeError"===e.name}return !1}()?function(e,t){return e.toLocaleDateString(t,{year:"numeric",month:"long",day:"numeric"})}:function(t){return fecha.format(t,"mediumDate")},n=function(){try{(new Date).toLocaleString("i");}catch(e){return "RangeError"===e.name}return !1}()?function(e,t){return e.toLocaleString(t,{year:"numeric",month:"long",day:"numeric",hour:"numeric",minute:"2-digit"})}:function(t){return fecha.format(t,"haDateTime")},r=function(){try{(new Date).toLocaleTimeString("i");}catch(e){return "RangeError"===e.name}return !1}()?function(e,t){return e.toLocaleTimeString(t,{hour:"numeric",minute:"2-digit"})}:function(t){return fecha.format(t,"shortTime")};function d(e){return e.substr(0,e.indexOf("."))}function g(e){return d(e.entity_id)}function b(e,t,i){var o,s=g(t);if("binary_sensor"===s)t.attributes.device_class&&(o=e("state."+s+"."+t.attributes.device_class+"."+t.state)),o||(o=e("state."+s+".default."+t.state));else if(t.attributes.unit_of_measurement&&!["unknown","unavailable"].includes(t.state))o=t.state+" "+t.attributes.unit_of_measurement;else if("input_datetime"===s){var c;if(t.attributes.has_time)if(t.attributes.has_date)c=new Date(t.attributes.year,t.attributes.month-1,t.attributes.day,t.attributes.hour,t.attributes.minute),o=n(c,i);else{var u=new Date;c=new Date(u.getFullYear(),u.getMonth(),u.getDay(),t.attributes.hour,t.attributes.minute),o=r(c,i);}else c=new Date(t.attributes.year,t.attributes.month-1,t.attributes.day),o=a(c,i);}else o="zwave"===s?["initializing","dead"].includes(t.state)?e("state.zwave.query_stage."+t.state,"query_stage",t.attributes.query_stage):e("state.zwave.default."+t.state):e("state."+s+"."+t.state);return o||(o=e("state.default."+t.state)||e("component."+s+".state."+t.state)||t.state),o}//# sourceMappingURL=index.m.js.map
+var a=function(){try{(new Date).toLocaleDateString("i");}catch(e){return "RangeError"===e.name}return !1}()?function(e,t){return e.toLocaleDateString(t,{year:"numeric",month:"long",day:"numeric"})}:function(t){return fecha.format(t,"mediumDate")},n=function(){try{(new Date).toLocaleString("i");}catch(e){return "RangeError"===e.name}return !1}()?function(e,t){return e.toLocaleString(t,{year:"numeric",month:"long",day:"numeric",hour:"numeric",minute:"2-digit"})}:function(t){return fecha.format(t,"haDateTime")},r=function(){try{(new Date).toLocaleTimeString("i");}catch(e){return "RangeError"===e.name}return !1}()?function(e,t){return e.toLocaleTimeString(t,{hour:"numeric",minute:"2-digit"})}:function(t){return fecha.format(t,"shortTime")};function d(e){return e.substr(0,e.indexOf("."))}function g(e){return d(e.entity_id)}function b(e,t,i){var o,s=g(t);if("binary_sensor"===s)t.attributes.device_class&&(o=e("state."+s+"."+t.attributes.device_class+"."+t.state)),o||(o=e("state."+s+".default."+t.state));else if(t.attributes.unit_of_measurement&&!["unknown","unavailable"].includes(t.state))o=t.state+" "+t.attributes.unit_of_measurement;else if("input_datetime"===s){var c;if(t.attributes.has_time)if(t.attributes.has_date)c=new Date(t.attributes.year,t.attributes.month-1,t.attributes.day,t.attributes.hour,t.attributes.minute),o=n(c,i);else{var u=new Date;c=new Date(u.getFullYear(),u.getMonth(),u.getDay(),t.attributes.hour,t.attributes.minute),o=r(c,i);}else c=new Date(t.attributes.year,t.attributes.month-1,t.attributes.day),o=a(c,i);}else o="zwave"===s?["initializing","dead"].includes(t.state)?e("state.zwave.query_stage."+t.state,"query_stage",t.attributes.query_stage):e("state.zwave.default."+t.state):e("state."+s+"."+t.state);return o||(o=e("state.default."+t.state)||e("component."+s+".state."+t.state)||t.state),o}
 
 class MediaPlayerPopupCard extends LitElement {
     constructor() {
