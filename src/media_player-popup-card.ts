@@ -1,6 +1,5 @@
 import { LitElement, html, css } from 'lit-element';
-import tinycolor, { TinyColor, isReadable } from '@ctrl/tinycolor';
-import { closePopUp } from 'card-tools/src/popup';
+import { fireEvent } from "card-tools/src/event";
 import {
   computeStateDisplay
 } from 'custom-card-helpers';
@@ -185,7 +184,15 @@ class MediaPlayerPopupCard extends LitElement {
 
   _close(event) {
     if(event && (event.target.className.includes('popup-inner') || event.target.className.includes('settings-inner'))) {
-      closePopUp();
+      const action = {
+          browser_mod: {
+              service: "browser_mod.close_popup",
+              data: {
+                browser_id: 'THIS'
+            }
+          }
+      }
+      fireEvent("ll-custom", action);
     }
   }
 
